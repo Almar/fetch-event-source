@@ -1,4 +1,8 @@
 # Fetch Event Source
+A web worker & nodejs compatible fork of @microsoft/fetch-event-source  
+This fork also introduced a new property `autoReconnect`, when set to true `fetEventSource` will automatically try to reconnect after the connection was closed.
+
+
 This package provides a better API for making [Event Source requests](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) - also known as server-sent events - with all the features available in the [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
 
 The [default browser EventSource API](https://developer.mozilla.org/en-US/docs/Web/API/EventSource) imposes several restrictions on the type of request you're allowed to make: the [only parameters](https://developer.mozilla.org/en-US/docs/Web/API/EventSource/EventSource#Parameters) you're allowed to pass in are the `url` and `withCredentials`, so:
@@ -17,7 +21,7 @@ In addition, this library also plugs into the browser's [Page Visibility API](ht
 
 # Install
 ```sh
-npm install @microsoft/fetch-event-source
+npm install @almars/fetch-event-source
 ```
 
 # Usage
@@ -55,16 +59,16 @@ fetchEventSource('/api/sse', {
 
 You can add better error handling, for example:
 ```ts
-class RetriableError extends Error { }
-class FatalError extends Error { }
-
 fetchEventSource('/api/sse', {
     async onopen(response) {
         if (response.ok && response.headers.get('content-type') === EventStreamContentType) {
             return; // everything's good
+        } else if (response.status == 204) {
+            // Received HTTP 204 No Content
+            throw new FatalError(`HTTP ${response.status} - ${response.statusText}`);
         } else if (response.status >= 400 && response.status < 500 && response.status !== 429) {
             // client-side errors are usually non-retriable:
-            throw new FatalError();
+            throw new FatalError(`HTTP ${response.status} - ${response.statusText}`);
         } else {
             throw new RetriableError();
         }
@@ -72,7 +76,7 @@ fetchEventSource('/api/sse', {
     onmessage(msg) {
         // if the server emits an error message, throw an exception
         // so it gets handled by the onerror callback below:
-        if (msg.event === 'FatalError') {
+        if (msg.event === 'Error') {
             throw new FatalError(msg.data);
         }
     },
@@ -99,14 +103,4 @@ require('fast-text-encoding');
 
 # Contributing
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
-
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+Please consider contributing on the main project: [@microsoft/fetch-event-source](https://github.com/Azure/fetch-event-source)
