@@ -52,9 +52,6 @@ export interface FetchEventSourceInit extends RequestInit {
 
     /** The Fetch function to use. Defaults to window.fetch */
     fetch?: typeof fetch;
-
-    /** if true, will automatically try to reconnect when connection is closed */
-    autoReconnect: boolean;
 }
 
 export function fetchEventSource(input: RequestInfo, {
@@ -66,7 +63,6 @@ export function fetchEventSource(input: RequestInfo, {
     onerror,
     openWhenHidden,
     fetch: inputFetch,
-    autoReconnect,
     ...rest
 }: FetchEventSourceInit) {
     return new Promise<void>((resolve, reject) => {
@@ -94,11 +90,6 @@ export function fetchEventSource(input: RequestInfo, {
             globalThis.document?.removeEventListener('visibilitychange', onVisibilityChange);
             globalThis.clearTimeout(retryTimer);
             curRequestController.abort();
-        }
-
-        function retry(interval: number) {
-            globalThis.clearTimeout(retryTimer);
-            retryTimer = globalThis.setTimeout(create, interval);
         }
 
         // if the incoming signal aborts, dispose resources and resolve:
@@ -135,28 +126,22 @@ export function fetchEventSource(input: RequestInfo, {
                     retryInterval = retry;
                 }, onmessage)));
 
-                if (autoReconnect) {
-                    retry(retryInterval)
-                } else {
-                    onclose?.();
-                    dispose();
-                    resolve();
-                }
+                onclose?.();
+                dispose();
+                resolve();
             } catch (err) {
                 if (!curRequestController.signal.aborted) {
                     // if we haven't aborted the request ourselves:
                     try {
-                        // check if we need to retry (onerror can result in an exception, see API):
+                        // check if we need to retry:
                         const interval: any = onerror?.(err) ?? retryInterval;
-                        retry(interval)
+                        globalThis.clearTimeout(retryTimer);
+                        retryTimer = globalThis.setTimeout(create, interval);
                     } catch (innerErr) {
                         // we should not retry anymore:
                         dispose();
                         reject(innerErr);
                     }
-                } else {
-                    dispose()
-                    reject(err)
                 }
             }
         }
