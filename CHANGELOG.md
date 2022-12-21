@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 2.1.0
+This release adds feature `autoReconnect`. Set property `autoReconnect` of `FetchEventSourceInit` to true and fetchEventSource will automatically try to reconnect when the connection is closed. If you want to use this feature and define an `onopen` callback, make sure to check for HTTP 204 (No Content). A response of HTTP 204 is the servers way of saying to stop connecting.  
+
 ## 2.0.1
 This release adds support for esmodule imports (see #4).
 
